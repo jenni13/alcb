@@ -1,8 +1,7 @@
 /*
 Nom : MANFREDO
 Prenom : Jennifer
-Compte examen : camsi10
-*/
+Compte examen : camsi10*/
 
 /* Includes */
 #include <linux/init.h>
@@ -31,7 +30,6 @@ static int major_num = 0;
 static struct request_queue *Queue;
 
 static int rb_close(struct inode *inode,struct file *filp);
-
 static int rb_open(struct block_device *dev, fmode_t mode);
 static int rb_getgeo(struct block_device *dev,struct hd_geometry *geo);
 
@@ -44,6 +42,7 @@ static struct rb_device
 	spinlock_t lock;
 	struct request_queue *rb_queue;
 	struct gendisk *rb_disk;
+	uint8_t *data;
 }rb_dev;
 
 static struct block_device_operations rb_fops =
@@ -56,7 +55,7 @@ static struct block_device_operations rb_fops =
 
 static int rb_open(struct block_device *dev, fmode_t mode)
 {
-	
+	printk(KERN_ALERT "Appel rb_open\n");	
 	return 0;
 }
 static int rb_close(struct inode *inode,struct file *filp)
@@ -89,10 +88,12 @@ int sample_init(void)
 	rb_dev.rb_disk->first_minor = 0;
 	rb_dev.rb_disk->fops = &rb_fops;
 	rb_dev.rb_disk->private_data = &rb_dev;
-    strcpy (rb_dev.rb_disk->disk_name, "sbd0");
-
+	strcpy (rb_dev.rb_disk->disk_name, "sbd0");
+	rb_dev.size = nsectors*hardsect_size;
 	spin_lock_init(&rb_dev.lock);
-
+	rb_dev.data = vmalloc(rb_dev.size);
+	if(rb_dev.data == NULL)
+		return -ENOMEM;
 	major_num = register_blkdev(major_num,"blc");
 
 	if(major_num<=0)
@@ -113,7 +114,7 @@ int sample_init(void)
 	return 0;
 
 	out:
-			vfree(rb_dev.rb_queue);
+			vfree(rb_dev.data);
 			return -ENOMEM;
 	out_unreg:
 			unregister_blkdev(major_num,"blc");
