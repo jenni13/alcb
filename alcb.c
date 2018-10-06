@@ -20,28 +20,24 @@ Compte examen : camsi10
 #include <linux/blk_types.h>
 
 #define LICENCE "GPL"
-#define AUTEUR "Deprez Vincent"
+#define AUTEUR "Manfredo_Jennifer"
 #define DESCRIPTION "Exemple de module Master CAMSI"
 #define DEVICE "My device"
-
-
-
-
 #define KERNEL_SECTOR_SIZE 512
+
 static int hardsect_size = 512;
 static int nsectors = 1024; 
 static int major_num = 0;
 static struct request_queue *Queue;
 
-// Char driver functions 
-//static ssize_t sample_read(struct file *f, char *buf, size_t size, loff_t *offset);
-//static ssize_t sample_write(struct file *f, const char *buf, size_t size, loff_t *offset);
-//static int sample_open(struct inode *in, struct file *f);
-//static int sample_release(struct inode *in, struct file *f);
-static int rb_open(struct inode *in, struct file *f)
+static int rb_close(struct inode *inode,struct file *filp);
 
-char *NomUtilisateur="Vincent";
+static int rb_open(struct block_device *dev, fmode_t mode);
+static int rb_getgeo(struct block_device *dev,struct hd_geometry *geo);
+
+char *NomUtilisateur="Jennifer";
 module_param(NomUtilisateur, charp, S_IRUGO);
+
 static struct rb_device
 {
 	unsigned int size;
@@ -54,51 +50,22 @@ static struct block_device_operations rb_fops =
 {
 	.owner = THIS_MODULE,
 	.open = rb_open,
-	.release = rb_close,
 	.getgeo = rb_getgeo,
+	.release = rb_close,
 };
 
-// standard file_ops for char driver 
-/*static struct file_operations fops = 
+static int rb_open(struct block_device *dev, fmode_t mode)
 {
-  .read = sample_read,
-  .write = sample_write,
-  .open = sample_open,
-  .release = sample_release,
-};*/
-
-
-// The dev_t for our device 
-dev_t dev;
-
-// The cdev for our device 
-struct cdev *my_cdev;
-
-
-/*static ssize_t sample_read(struct file *f, char *buf, size_t size, loff_t *offset) 
-{
+	
 	return 0;
-}*/
-
-/*static ssize_t sample_write(struct file *f, const char *buf, size_t size, loff_t *offset) 
+}
+static int rb_close(struct inode *inode,struct file *filp)
 {
-	return 0;
-}*/
-
-/*static int sample_open(struct inode *in, struct file *f) 
-{
-	return 0;
-
-}*/
-
-/*static int sample_release(struct inode *in, struct file *f) 
-{
-	printk(KERN_DEBUG "close()\n");
+	printk(KERN_ALERT "Appel de rb_close");
 	return 0;
 
 }
-*/
-static int rb_open(struct inode *in, struct file *f)
+static int rb_getgeo(struct block_device *dev,struct hd_geometry *geo)
 {
 	return 0;
 }
@@ -107,7 +74,7 @@ static int rb_open(struct inode *in, struct file *f)
 int sample_init(void) 
 {
 	printk(KERN_ALERT "Hello %s !\n", NomUtilisateur);
-    
+
 	// Dynamic allocation for (major,minor) 
 	/*if (alloc_chrdev_region(&dev,0,2,"sample") == -1)
 	{
@@ -116,16 +83,18 @@ int sample_init(void)
 	}
 	// Print out the values 
 	printk(KERN_ALERT "Init allocated (major, minor)=(%d,%d)\n",MAJOR(dev),MINOR(dev));
-
+	*/
 	// Structures allocation 
-	my_cdev = cdev_alloc();
-	my_cdev->ops = &fops;
-	my_cdev->owner = THIS_MODULE;*/
-	// linking operations to device 
-	cdev_add(my_cdev,dev,2); 
+	rb_dev.rb_disk->major = major_num;
+	rb_dev.rb_disk->first_minor = 0;
+	rb_dev.rb_disk->fops = &rb_fops;
+	rb_dev.rb_disk->private_data = &rb_dev;
+    strcpy (rb_dev.rb_disk->disk_name, "sbd0");
+
 	spin_lock_init(&rb_dev.lock);
-	
+
 	major_num = register_blkdev(major_num,"blc");
+
 	if(major_num<=0)
 	{
 		printk(KERN_WARNING "blc, unable to get major number\n");
@@ -135,19 +104,21 @@ int sample_init(void)
 	if(!rb_dev.rb_disk)
 	{
 		goto out_unreg;
+		
 	}
 	set_capacity(rb_dev.rb_disk,nsectors*(hardsect_size/KERNEL_SECTOR_SIZE));
 	rb_dev.rb_disk->queue = Queue;
-   	add_disk(rb_dev.rb_disk);
+	add_disk(rb_dev.rb_disk);
 
 	return 0;
 
 	out:
-        	vfree(rb_dev.rb_queue);
-        	return -ENOMEM;
+			vfree(rb_dev.rb_queue);
+			return -ENOMEM;
 	out_unreg:
-        	unregister_blkdev(major_num,"blc");
-
+			unregister_blkdev(major_num,"blc");
+			return -ENOMEM;
+	
 }
 
 
