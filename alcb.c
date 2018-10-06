@@ -134,6 +134,7 @@ static void sample_cleanup(void)
 	//blk
 	del_gendisk(rb_dev.rb_disk);
 	put_disk(rb_dev.rb_disk);
+	unregister_blkdev(major_num,"sdb0");
 	blk_cleanup_queue(rb_dev.rb_queue);
 	vfree(rb_dev.rb_queue);
 }
