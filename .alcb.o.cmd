@@ -878,6 +878,7 @@ deps_/root/alcb/alcb.o := \
   include/linux/hashtable.h \
   include/linux/hash.h \
     $(wildcard include/config/arch/has/fast/multiplier.h) \
+  include/uapi/linux/hdreg.h \
 
 /root/alcb/alcb.o: $(deps_/root/alcb/alcb.o)
 

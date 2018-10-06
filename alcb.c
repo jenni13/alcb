@@ -21,10 +21,8 @@ Compte examen : camsi10*/
 #include <linux/types.h>
 #include <linux/hdreg.h>
 
-#define LICENCE "GPL"
-#define AUTEUR "Manfredo_Jennifer"
-#define DESCRIPTION "Exemple de module Master CAMSI"
-#define DEVICE "My device"
+#define MODULE_LICENCE "GPL"
+
 #define KERNEL_SECTOR_SIZE 512
 
 static int hardsect_size = 512;
@@ -32,9 +30,9 @@ static int nsectors = 1024;
 static int major_num = 0;
 static struct request_queue *Queue;
 
-static int rb_close(struct inode *inode,struct file *filp);
-static int rb_open(struct block_device *dev, fmode_t mode);
-static int rb_getgeo(struct block_device *dev,struct hd_geometry *geo);
+//static int rb_close(struct inode *inode,struct file *filp);
+//static int rb_open(struct block_device *dev, fmode_t mode);
+//static int rb_getgeo(struct block_device *dev,struct hd_geometry *geo);
 
 char *NomUtilisateur="Jennifer";
 module_param(nsectors, int, 0);
@@ -48,6 +46,24 @@ static struct rb_device
 	uint8_t *data;
 }rb_dev;
 
+static int rb_open(struct block_device *dev, fmode_t mode)
+{
+        printk(KERN_ALERT "Appel rb_open\n");
+        return 0;
+}
+static int rb_close(struct inode *inode,struct file *filp)
+{
+        printk(KERN_ALERT "Appel de rb_close\n");
+        return 0;
+
+}
+static int rb_getgeo(struct block_device *dev,struct hd_geometry *geo)
+{
+        printk(KERN_ALERT "Appel de rb_getgeo\n");
+        return 0;
+}
+
+
 static struct block_device_operations rb_fops =
 {
 	.owner = THIS_MODULE,
@@ -56,25 +72,9 @@ static struct block_device_operations rb_fops =
 	.release = rb_close,
 };
 
-static int rb_open(struct block_device *dev, fmode_t mode)
-{
-	printk(KERN_ALERT "Appel rb_open\n");	
-	return 0;
-}
-static int rb_close(struct inode *inode,struct file *filp)
-{
-	printk(KERN_ALERT "Appel de rb_close\n");
-	return 0;
-
-}
-static int rb_getgeo(struct block_device *dev,struct hd_geometry *geo)
-{
-	printk(KERN_ALERT "Appel de rb_getgeo\n");
-	return 0;
-}
 static void rb_transfert(struct rb_device *dev, unsigned long sector,
 						unsigned long nsect, char *buffer, int write)
-{
+{/*
 	unsigned long offset = sector*hardsect_size;
 	unsigned long nbytes = nsect*hardsect_size;
 	
@@ -86,25 +86,25 @@ static void rb_transfert(struct rb_device *dev, unsigned long sector,
 	if(write)
 		memcpy(dev->data+offset,buffer,nbytes);
 	else
-		memcpy(buffer,dev->data+offset,nbytes);
+		memcpy(buffer,dev->data+offset,nbytes);*/
 }
 
 static void rb_request(struct request_queue *q)
 {
-	struct request *req;
+	/*struct request *req;
 	while((req = blk_fetch_request(q) != NULL))
 	{
 		if(!blk_fs_request(req))
 		{
 			printk(KERN_NOTICE "Skip non - fs request\n");
-			end_request(req,0);
+			blk_end_request_all(req,0);
 			continue;
 		}
 	
 		rb_transfert(&rb_dev,req -> sector, req -> current_nr_sectors,
 					req -> buffer, rq_data_dir(req));
 		end_request(req,1);
-	}
+	}*/
 }
 
 int blk_init(void) 
@@ -172,8 +172,8 @@ module_exit(blk_cleanup);
 module_init(blk_init);
 
 
-MODULE_LICENSE(LICENCE);
-MODULE_AUTHOR(AUTEUR);
-MODULE_DESCRIPTION(DESCRIPTION);
-MODULE_SUPPORTED_DEVICE(DEVICE);
+//MODULE_LICENSE(LICENCE);
+//MODULE_AUTHOR(AUTEUR);
+//MODULE_DESCRIPTION(DESCRIPTION);
+//MODULE_SUPPORTED_DEVICE(DEVICE);
 
