@@ -17,6 +17,7 @@ Compte examen : camsi10*/
 #include <linux/genhd.h>
 #include <linux/blkdev.h>
 #include <linux/blk_types.h>
+#include <linux/errno.h>
 
 #define LICENCE "GPL"
 #define AUTEUR "Manfredo_Jennifer"
@@ -34,11 +35,11 @@ static int rb_open(struct block_device *dev, fmode_t mode);
 static int rb_getgeo(struct block_device *dev,struct hd_geometry *geo);
 
 char *NomUtilisateur="Jennifer";
-module_param(NomUtilisateur, charp, S_IRUGO);
+module_param(nsectors, int, 0);
 
 static struct rb_device
 {
-	unsigned int size;
+	unsigned long size;
 	spinlock_t lock;
 	struct request_queue *rb_queue;
 	struct gendisk *rb_disk;
@@ -60,29 +61,38 @@ static int rb_open(struct block_device *dev, fmode_t mode)
 }
 static int rb_close(struct inode *inode,struct file *filp)
 {
-	printk(KERN_ALERT "Appel de rb_close");
+	printk(KERN_ALERT "Appel de rb_close\n");
 	return 0;
 
 }
 static int rb_getgeo(struct block_device *dev,struct hd_geometry *geo)
 {
+	printk(KERN_ALERT "Appel de rb_getgeo\n");
 	return 0;
 }
+static void rb_transfert(struct rb_device *dev, unsigned long sector,
+						unsigned long nsect, char *buffer, int write)
+{
+	
+}
 
+static void rb_request(struct request_queue *q)
+{
+}
 
-int sample_init(void) 
+int blk_init(void) 
 {
 	printk(KERN_ALERT "Hello %s !\n", NomUtilisateur);
-
-	// Dynamic allocation for (major,minor) 
-	/*if (alloc_chrdev_region(&dev,0,2,"sample") == -1)
-	{
-		printk(KERN_ALERT ">>> ERROR alloc_chrdev_region\n");
-		return -EINVAL;
-	}
-	// Print out the values 
-	printk(KERN_ALERT "Init allocated (major, minor)=(%d,%d)\n",MAJOR(dev),MINOR(dev));
-	*/
+	
+	rb_dev.size = nsectors*hardsect_size;
+	spin_lock_init(&rb_dev.lock);
+	rb_dev.data = vmalloc(rb_dev.size);
+	if(rb_dev.data == NULL)
+		return -ENOMEM;
+	Queue = blk_init_queue(rb_request,&rb_dev.lock);
+	if(Queue == NULL)
+		goto out;
+	blk_queue_hardsect_size(Queue,hardsect_size);
 	// Structures allocation 
 	rb_dev.rb_disk->major = major_num;
 	rb_dev.rb_disk->first_minor = 0;
@@ -90,10 +100,8 @@ int sample_init(void)
 	rb_dev.rb_disk->private_data = &rb_dev;
 	strcpy (rb_dev.rb_disk->disk_name, "sbd0");
 	rb_dev.size = nsectors*hardsect_size;
-	spin_lock_init(&rb_dev.lock);
-	rb_dev.data = vmalloc(rb_dev.size);
-	if(rb_dev.data == NULL)
-		return -ENOMEM;
+
+
 	major_num = register_blkdev(major_num,"blc");
 
 	if(major_num<=0)
@@ -123,7 +131,7 @@ int sample_init(void)
 }
 
 
-static void sample_cleanup(void) 
+static void blk_cleanup(void) 
 {
     printk(KERN_ALERT "Goodbye %s\n", NomUtilisateur);
     
@@ -135,12 +143,12 @@ static void sample_cleanup(void)
 	del_gendisk(rb_dev.rb_disk);
 	put_disk(rb_dev.rb_disk);
 	unregister_blkdev(major_num,"sdb0");
-	blk_cleanup_queue(rb_dev.rb_queue);
-	vfree(rb_dev.rb_queue);
+	blk_cleanup_queue(Queue);
+	vfree(rb_dev.data);
 }
 
-module_exit(sample_cleanup);
-module_init(sample_init);
+module_exit(blk_cleanup);
+module_init(blk_init);
 
 
 MODULE_LICENSE(LICENCE);
