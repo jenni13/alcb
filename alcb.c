@@ -18,6 +18,8 @@ Compte examen : camsi10*/
 #include <linux/blkdev.h>
 #include <linux/blk_types.h>
 #include <linux/errno.h>
+#include <linux/types.h>
+#include <linux/hdreg.h>
 
 #define LICENCE "GPL"
 #define AUTEUR "Manfredo_Jennifer"
@@ -73,11 +75,36 @@ static int rb_getgeo(struct block_device *dev,struct hd_geometry *geo)
 static void rb_transfert(struct rb_device *dev, unsigned long sector,
 						unsigned long nsect, char *buffer, int write)
 {
+	unsigned long offset = sector*hardsect_size;
+	unsigned long nbytes = nsect*hardsect_size;
 	
+	if((offset + nbytes) > dev -> size)
+	{
+		printk(KERN_NOTICE "probleme transfert\n");
+		return;
+	}
+	if(write)
+		memcpy(dev->data+offset,buffer,nbytes);
+	else
+		memcpy(buffer,dev->data+offset,nbytes);
 }
 
 static void rb_request(struct request_queue *q)
 {
+	struct request *req;
+	while((req = blk_fetch_request(q) != NULL))
+	{
+		if(!blk_fs_request(req))
+		{
+			printk(KERN_NOTICE "Skip non - fs request\n");
+			end_request(req,0);
+			continue;
+		}
+	
+		rb_transfert(&rb_dev,req -> sector, req -> current_nr_sectors,
+					req -> buffer, rq_data_dir(req));
+		end_request(req,1);
+	}
 }
 
 int blk_init(void) 
@@ -92,16 +119,9 @@ int blk_init(void)
 	Queue = blk_init_queue(rb_request,&rb_dev.lock);
 	if(Queue == NULL)
 		goto out;
-	blk_queue_hardsect_size(Queue,hardsect_size);
-	// Structures allocation 
-	rb_dev.rb_disk->major = major_num;
-	rb_dev.rb_disk->first_minor = 0;
-	rb_dev.rb_disk->fops = &rb_fops;
-	rb_dev.rb_disk->private_data = &rb_dev;
-	strcpy (rb_dev.rb_disk->disk_name, "sbd0");
-	rb_dev.size = nsectors*hardsect_size;
-
-
+	//blk_queue_hardsect_size(Queue,hardsect_size);
+	
+	
 	major_num = register_blkdev(major_num,"blc");
 
 	if(major_num<=0)
@@ -109,12 +129,18 @@ int blk_init(void)
 		printk(KERN_WARNING "blc, unable to get major number\n");
 		goto out;
 	}
+	
 	rb_dev.rb_disk = alloc_disk(16);
 	if(!rb_dev.rb_disk)
-	{
 		goto out_unreg;
-		
-	}
+	
+	// Structures allocation 
+	rb_dev.rb_disk->major = major_num;
+	rb_dev.rb_disk->first_minor = 0;
+	rb_dev.rb_disk->fops = &rb_fops;
+	rb_dev.rb_disk->private_data = &rb_dev;
+	strcpy (rb_dev.rb_disk->disk_name, "sbd0");
+	rb_dev.size = nsectors*hardsect_size;
 	set_capacity(rb_dev.rb_disk,nsectors*(hardsect_size/KERNEL_SECTOR_SIZE));
 	rb_dev.rb_disk->queue = Queue;
 	add_disk(rb_dev.rb_disk);
@@ -135,11 +161,6 @@ static void blk_cleanup(void)
 {
     printk(KERN_ALERT "Goodbye %s\n", NomUtilisateur);
     
-	// Unregister 
-	//unregister_chrdev_region(dev,2);
-	// Delete cdev 
-	//cdev_del(my_cdev);
-	//blk
 	del_gendisk(rb_dev.rb_disk);
 	put_disk(rb_dev.rb_disk);
 	unregister_blkdev(major_num,"sdb0");

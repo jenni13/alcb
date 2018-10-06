@@ -226,4 +226,4 @@ alcb.o: /home/jenni/Documents/M2/alcb/alcb.c include/linux/kconfig.h \
  include/linux/blk_types.h include/linux/bvec.h include/linux/bsg.h \
  include/uapi/linux/bsg.h include/linux/scatterlist.h \
  include/uapi/linux/blkzoned.h include/linux/elevator.h \
- include/linux/hashtable.h
+ include/linux/hashtable.h include/uapi/linux/hdreg.h
