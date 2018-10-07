@@ -27,15 +27,18 @@ Compte examen : camsi10*/
 #define KERNEL_SECTOR_SIZE 512
 
 static int hardsect_size = 512;
+module_param(hardsect_size,int,0);
+
 static int nsectors = 1024;
+module_param(nsectors, int, 0);
+
 static int major_num = 0;
+module_param(major_num,int,0);
+
 static struct request_queue *Queue;
 
-//static int rb_open(struct block_device *dev, fmode_t mode);
-//static int rb_getgeo(struct block_device *dev,struct hd_geometry *geo);
-
 char *NomUtilisateur="Jennifer";
-module_param(nsectors, int, 0);
+
 
 static struct rb_device
 {
@@ -53,6 +56,7 @@ static int rb_open(struct block_device *dev, fmode_t mode)
 }
 static int rb_release(struct inode *inode, struct file *filp,unsigned int cmd,unsigned long arg)
 {
+
 	printk(KERN_ALERT "Appel rb_release\n");
 	return 0;
 }
@@ -67,7 +71,7 @@ int rb_ioctl(struct inode *inode,struct file *filp,unsigned int cmd,unsigned lon
 {
 	long size;
 	struct hd_geometry *geo;
-	
+
 	switch(cmd){
 		case HDIO_GETGEO:
 			printk(KERN_ALERT "Appel de rb_getgeo\n");
@@ -75,7 +79,7 @@ int rb_ioctl(struct inode *inode,struct file *filp,unsigned int cmd,unsigned lon
         		geo -> cylinders = (size & ~0x3f) >> 6;
        			geo -> heads = 4;
         		geo -> sectors = 16;
-        		geo -> start = 0;
+        		geo -> start = 4;
         		if(copy_to_user((void * ) arg,&geo,sizeof(geo)))
                 		return -EFAULT;
 			return 0;
@@ -89,18 +93,18 @@ static struct block_device_operations rb_fops =
 {
 	.owner = THIS_MODULE,
 	.open = rb_open,
-	.release = rb_release,
         .getgeo = rb_getgeo,
         .ioctl = rb_ioctl,
+	.release = rb_release,
 
 };
 
 static void rb_transfert(struct rb_device *dev, unsigned long sector,
-						unsigned long nsect, char *buffer, int write)
+				unsigned long nsect, char *buffer, int write)
 {
 	unsigned long offset = sector*hardsect_size;
 	unsigned long nbytes = nsect*hardsect_size;
-
+	printk(KERN_ALERT "transfert\n");
 	if((offset + nbytes) > dev -> size)
 	{
 		printk(KERN_NOTICE "probleme transfert\n");
@@ -115,12 +119,14 @@ static void rb_transfert(struct rb_device *dev, unsigned long sector,
 static void rb_request(struct request_queue *q)
 {
 	struct request *req;
+
+	printk(KERN_ALERT "request\n");
 	while((req = blk_fetch_request(q)) != NULL)
 	{
-		if(req == NULL || (req -> cmd_type != REQ_TYPE_FS))
+		if((req == NULL || req -> cmd_type != REQ_TYPE_FS))
 		{
 			printk(KERN_NOTICE "Skip non - fs request\n");
-			blk_end_request_all(req,0);
+			blk_end_request_all(req,-EIO);
 			continue;
 		}
 
@@ -143,14 +149,14 @@ int blk_init(void)
 	Queue = blk_init_queue(rb_request,&rb_dev.lock);
 	if(Queue == NULL)
 		goto out;
-	//blk_queue_hardsect_size(Queue,hardsect_size);
+	blk_queue_logical_block_size(Queue,hardsect_size);
 
 
-	major_num = register_blkdev(major_num,"blc");
+	major_num = register_blkdev(major_num,"sbd");
 
-	if(major_num<=0)
+	if(major_num<0)
 	{
-		printk(KERN_WARNING "blc, unable to get major number\n");
+		printk(KERN_WARNING "sbd, unable to get major number\n");
 		goto out;
 	}
 
@@ -175,8 +181,8 @@ int blk_init(void)
 			vfree(rb_dev.data);
 			return -ENOMEM;
 	out_unreg:
-			unregister_blkdev(major_num,"sbd0");
-			return -ENOMEM;
+			unregister_blkdev(major_num,"sbd");
+
 
 }
 
@@ -187,7 +193,7 @@ static void blk_cleanup(void)
 
 	del_gendisk(rb_dev.rb_disk);
 	put_disk(rb_dev.rb_disk);
-	unregister_blkdev(major_num,"sdb0");
+	unregister_blkdev(major_num,"sdb");
 	blk_cleanup_queue(Queue);
 	vfree(rb_dev.data);
 }
