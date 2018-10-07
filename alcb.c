@@ -21,7 +21,7 @@ Compte examen : camsi10*/
 #include <linux/types.h>
 #include <linux/hdreg.h>
 
-#define MODULE_LICENCE "GPL"
+#define LICENCE "GPL"
 
 #define KERNEL_SECTOR_SIZE 512
 
@@ -30,7 +30,6 @@ static int nsectors = 1024;
 static int major_num = 0;
 static struct request_queue *Queue;
 
-//static int rb_close(struct inode *inode,struct file *filp);
 //static int rb_open(struct block_device *dev, fmode_t mode);
 //static int rb_getgeo(struct block_device *dev,struct hd_geometry *geo);
 
@@ -51,12 +50,7 @@ static int rb_open(struct block_device *dev, fmode_t mode)
         printk(KERN_ALERT "Appel rb_open\n");
         return 0;
 }
-static int rb_close(struct inode *inode,struct file *filp)
-{
-        printk(KERN_ALERT "Appel de rb_close\n");
-        return 0;
 
-}
 static int rb_getgeo(struct block_device *dev,struct hd_geometry *geo)
 {
         printk(KERN_ALERT "Appel de rb_getgeo\n");
@@ -69,12 +63,11 @@ static struct block_device_operations rb_fops =
 	.owner = THIS_MODULE,
 	.open = rb_open,
 	.getgeo = rb_getgeo,
-	.release = rb_close,
 };
 
 static void rb_transfert(struct rb_device *dev, unsigned long sector,
 						unsigned long nsect, char *buffer, int write)
-{/*
+{
 	unsigned long offset = sector*hardsect_size;
 	unsigned long nbytes = nsect*hardsect_size;
 	
@@ -86,12 +79,12 @@ static void rb_transfert(struct rb_device *dev, unsigned long sector,
 	if(write)
 		memcpy(dev->data+offset,buffer,nbytes);
 	else
-		memcpy(buffer,dev->data+offset,nbytes);*/
+		memcpy(buffer,dev->data+offset,nbytes);
 }
 
 static void rb_request(struct request_queue *q)
 {
-	/*struct request *req;
+	struct request *req;
 	while((req = blk_fetch_request(q) != NULL))
 	{
 		if(!blk_fs_request(req))
@@ -104,7 +97,7 @@ static void rb_request(struct request_queue *q)
 		rb_transfert(&rb_dev,req -> sector, req -> current_nr_sectors,
 					req -> buffer, rq_data_dir(req));
 		end_request(req,1);
-	}*/
+	}
 }
 
 int blk_init(void) 
@@ -172,7 +165,7 @@ module_exit(blk_cleanup);
 module_init(blk_init);
 
 
-//MODULE_LICENSE(LICENCE);
+MODULE_LICENSE(LICENCE);
 //MODULE_AUTHOR(AUTEUR);
 //MODULE_DESCRIPTION(DESCRIPTION);
 //MODULE_SUPPORTED_DEVICE(DEVICE);
