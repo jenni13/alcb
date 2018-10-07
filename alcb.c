@@ -123,7 +123,7 @@ static void rb_request(struct request_queue *q)
 	printk(KERN_ALERT "request\n");
 	while((req = blk_fetch_request(q)) != NULL)
 	{
-		if((req == NULL || req -> cmd_type != REQ_TYPE_FS))
+		if(req == NULL || (req -> cmd_type != REQ_TYPE_FS))
 		{
 			printk(KERN_NOTICE "Skip non - fs request\n");
 			blk_end_request_all(req,-EIO);
