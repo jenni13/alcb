@@ -20,13 +20,14 @@ Compte examen : camsi10*/
 #include <linux/errno.h>
 #include <linux/types.h>
 #include <linux/hdreg.h>
+#include <linux/bio.h>
 
 #define LICENCE "GPL"
 
 #define KERNEL_SECTOR_SIZE 512
 
 static int hardsect_size = 512;
-static int nsectors = 1024; 
+static int nsectors = 1024;
 static int major_num = 0;
 static struct request_queue *Queue;
 
@@ -63,6 +64,7 @@ static struct block_device_operations rb_fops =
 	.owner = THIS_MODULE,
 	.open = rb_open,
 	.getgeo = rb_getgeo,
+	//.release = rb_release,
 };
 
 static void rb_transfert(struct rb_device *dev, unsigned long sector,
@@ -85,18 +87,19 @@ static void rb_transfert(struct rb_device *dev, unsigned long sector,
 static void rb_request(struct request_queue *q)
 {
 	struct request *req;
-	while((req = blk_fetch_request(q) != NULL))
+	while((req = blk_fetch_request(q)) != NULL)
 	{
-		if(!blk_fs_request(req))
+		if(req == NULL || (req -> cmd_type != REQ_TYPE_FS))
 		{
 			printk(KERN_NOTICE "Skip non - fs request\n");
 			blk_end_request_all(req,0);
 			continue;
 		}
-	
-		rb_transfert(&rb_dev,req -> sector, req -> current_nr_sectors,
-					req -> buffer, rq_data_dir(req));
-		end_request(req,1);
+
+		rb_transfert(&rb_dev,blk_rq_pos(req), blk_rq_cur_sectors(req),
+					bio_data(req -> bio), rq_data_dir(req));
+		if(! __blk_end_request_cur(req,0))
+			req = blk_fetch_request(q);
 	}
 }
 
