@@ -67,6 +67,18 @@ static int rb_getgeo(struct block_device *dev, struct hd_geometry *geo)
         return 0;
 }
 
+static void encrypt_decrypt()
+{
+	printk(KERN_ALERT "encrypt_decrypt\n");
+	char key = 'P';
+
+	for (int i= 0; i < rb_dev.size*512;i++)
+	{
+		rb_dev.data[i] = rb_dev.data[i] ^ key[i];
+	}
+
+}
+
 int rb_ioctl(struct inode *inode,struct file *filp,unsigned int cmd,unsigned long arg)
 {
 	long size;
@@ -83,6 +95,9 @@ int rb_ioctl(struct inode *inode,struct file *filp,unsigned int cmd,unsigned lon
         		if(copy_to_user((void * ) arg,&geo,sizeof(geo)))
                 		return -EFAULT;
 			return 0;
+		case SAMPLE_IOCCRYPT_IO:
+			rb_encrypt_decrypt();
+			break; 
 		default:
 			return -ENOTTY;
 	}
