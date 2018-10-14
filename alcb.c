@@ -77,14 +77,14 @@ static void rb_encrypt_decrypt(void)
 	int i=0;
 	printk(KERN_ALERT "encrypt_decrypt\n");
 
-	for (i= 0; i < rb_dev.size*512;i++)
+	for (i= 0; i < rb_dev.size*512;++i)
 	{
 		rb_dev.data[i] = rb_dev.data[i] ^ mdp[i];
 	}
 
 }
 
-int rb_ioctl(struct inode *inode, struct file *filp,unsigned int cmd,unsigned long arg)
+static int rb_ioctl(struct inode *inode, struct file *filp,unsigned int cmd,unsigned long arg)
 {
 	long size;
 	struct hd_geometry *geo;
@@ -101,6 +101,7 @@ int rb_ioctl(struct inode *inode, struct file *filp,unsigned int cmd,unsigned lo
                 		return -EFAULT;
 			return 0;
 		case SAMPLE_IOCCRYPT:
+			printk(KERN_ALERT "IOCRYPT\n");
 			rb_encrypt_decrypt();
 			break;
 		default:
@@ -202,6 +203,7 @@ int blk_init(void)
 			return -ENOMEM;
 	out_unreg:
 			unregister_blkdev(major_num,"sbd");
+			return -ENOMEM;
 
 
 }
