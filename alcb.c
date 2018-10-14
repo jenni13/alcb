@@ -21,10 +21,15 @@ Compte examen : camsi10*/
 #include <linux/types.h>
 #include <linux/hdreg.h>
 #include <linux/bio.h>
+#include <linux/ioctl.h>
 
 #define LICENCE "GPL"
 
 #define KERNEL_SECTOR_SIZE 512
+
+#define SAMPLE_IOC_MAGIC 'k'
+#define SAMPLE_IOCCRYPT _IO(SAMPLE_IOC_MAGIC,0)
+#define SAMPLE_IOC_MAXNR 0
 
 static int hardsect_size = 512;
 module_param(hardsect_size,int,0);
@@ -38,7 +43,7 @@ module_param(major_num,int,0);
 static struct request_queue *Queue;
 
 char *NomUtilisateur="Jennifer";
-
+char mdp[4]="code";
 
 static struct rb_device
 {
@@ -67,19 +72,19 @@ static int rb_getgeo(struct block_device *dev, struct hd_geometry *geo)
         return 0;
 }
 
-static void rb_encrypt_decrypt()
+static void rb_encrypt_decrypt(void)
 {
+	int i=0;
 	printk(KERN_ALERT "encrypt_decrypt\n");
-	char key = 'P';
 
-	for (int i= 0; i < rb_dev.size*512;i++)
+	for (i= 0; i < rb_dev.size*512;i++)
 	{
-		rb_dev.data[i] = rb_dev.data[i] ^ key[i];
+		rb_dev.data[i] = rb_dev.data[i] ^ mdp[i];
 	}
 
 }
 
-int rb_ioctl(struct inode *inode,struct file *filp,unsigned int cmd,unsigned long arg)
+int rb_ioctl(struct inode *inode, struct file *filp,unsigned int cmd,unsigned long arg)
 {
 	long size;
 	struct hd_geometry *geo;
@@ -95,7 +100,7 @@ int rb_ioctl(struct inode *inode,struct file *filp,unsigned int cmd,unsigned lon
         		if(copy_to_user((void * ) arg,&geo,sizeof(geo)))
                 		return -EFAULT;
 			return 0;
-		case SAMPLE_IOCCRYPT_IO:
+		case SAMPLE_IOCCRYPT:
 			rb_encrypt_decrypt();
 			break;
 		default:
