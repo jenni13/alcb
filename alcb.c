@@ -67,7 +67,7 @@ static int rb_getgeo(struct block_device *dev, struct hd_geometry *geo)
         return 0;
 }
 
-static void encrypt_decrypt()
+static void rb_encrypt_decrypt()
 {
 	printk(KERN_ALERT "encrypt_decrypt\n");
 	char key = 'P';
@@ -97,7 +97,7 @@ int rb_ioctl(struct inode *inode,struct file *filp,unsigned int cmd,unsigned lon
 			return 0;
 		case SAMPLE_IOCCRYPT_IO:
 			rb_encrypt_decrypt();
-			break; 
+			break;
 		default:
 			return -ENOTTY;
 	}
